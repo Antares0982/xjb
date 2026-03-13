@@ -39,7 +39,7 @@ const int is_bench_float_to_string = BENCH_STR;
 
 const int CHECK_CORRECTNESS = 0;
 
-const u64 LOOP_UNROLL = 2;
+const u64 LOOP_UNROLL = 1;
 
 // double and float algorithm set
 #include "schubfach/schubfach_i.hpp"
@@ -174,6 +174,7 @@ void init_double()
     double_to_decimal_algorithm_set.push_back({std::string("xjb64"), xjb64_f64_to_dec});                   // 8
     double_to_decimal_algorithm_set.push_back({std::string("xjb64_comp"), xjb64_comp_f64_to_dec});         // 9
     double_to_decimal_algorithm_set.push_back({std::string("zmij64"), zmij_f64_to_dec});                   // 10
+    double_to_decimal_algorithm_set.push_back({std::string("uscalec"), uscalec_f64_to_dec});               // 11
 
     double_to_string_algorithm_set.clear();
 
@@ -289,8 +290,6 @@ void bench_double_single_impl(int i)
 
     char *buffer = (char *)malloc(128);
     memset(buffer, 0, 128);
-    unsigned long long d;
-    int k;
     u64 sum_final = 0;
     auto t1 = getns();
     auto c1 = get_cycle();
@@ -302,15 +301,16 @@ void bench_double_single_impl(int i)
 
     if (is_bench_double_to_decimal)
     {
-#define BENCH_DOUBLE_TO_DECIMAL(n, name)                \
-    if (i == n)                                         \
-        for (u64 j = 0; j < N; j += LOOP_UNROLL)        \
-        {                                               \
-            for (u64 u = 0; u < LOOP_UNROLL; u++)       \
-            {                                           \
-                name##_f64_to_dec(data[j + u], &d, &k); \
-                sum_final += d;                         \
-            }                                           \
+#define BENCH_DOUBLE_TO_DECIMAL(n, name)            \
+    if (i == n)                                     \
+        for (u64 j = 0; j < N; j += 1)              \
+        {                                           \
+            {                                       \
+                unsigned long long d;               \
+                int k;                              \
+                name##_f64_to_dec(data[j], &d, &k); \
+                sum_final += d;                     \
+            }                                       \
         };
 
         BENCH_DOUBLE_TO_DECIMAL(0, schubfach)
@@ -324,6 +324,7 @@ void bench_double_single_impl(int i)
         BENCH_DOUBLE_TO_DECIMAL(8, xjb64_v2)
         BENCH_DOUBLE_TO_DECIMAL(9, xjb64_comp)
         BENCH_DOUBLE_TO_DECIMAL(10, zmij)
+        BENCH_DOUBLE_TO_DECIMAL(11, uscalec)
     }
 
     if (is_bench_double_to_string)
@@ -394,17 +395,16 @@ void bench_float_single_impl(int i)
 
     if (is_bench_float_to_decimal)
     {
-#define BENCH_FLOAT_TO_DECIMAL(n, name)                       \
-    if (i == n)                                               \
-        for (u64 j = 0; j < N; j += LOOP_UNROLL)              \
-        {                                                     \
-            for (u64 u = 0; u < LOOP_UNROLL; u++)             \
-            {                                                 \
-                u32 d;                                        \
-                int k;                                        \
-                name##_f32_to_dec(data_float[j + u], &d, &k); \
-                sum_final += d;                               \
-            }                                                 \
+#define BENCH_FLOAT_TO_DECIMAL(n, name)                   \
+    if (i == n)                                           \
+        for (u64 j = 0; j < N; j += 1)                    \
+        {                                                 \
+            {                                             \
+                u32 d;                                    \
+                int k;                                    \
+                name##_f32_to_dec(data_float[j], &d, &k); \
+                sum_final += d;                           \
+            }                                             \
         };
 
         BENCH_FLOAT_TO_DECIMAL(0, xjb_v2)
@@ -598,7 +598,6 @@ void print_cpu_info()
     printf("CPU ARCH: x86_64\n");
 #elif defined(__aarch64__)
     printf("CPU ARCH: ARM64\n");
-#elif defined(__aarch64__)
 #else
     printf("CPU ARCH: unknown\n");
 #endif
