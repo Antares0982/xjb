@@ -1,3 +1,6 @@
+/build/
+/.nix-env
+
 bench/main_gcc
 bench/main_clang
 bench/main_icpx
@@ -19,7 +22,7 @@ other_benchmark_project/bench_16digit_to_ascii/verify
 bench/xjb/perf/main_g
 bench/xjb/perf/main_c
 bench/xjb/perf/main_i
-test
+
 bench/xjb/*.s
 bench/xjb/perf/*.s
 **/.DS_Store
