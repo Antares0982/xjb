@@ -1,4 +1,5 @@
 /build/
+/.nix-env
 
 bench/main_gcc
 bench/main_clang
