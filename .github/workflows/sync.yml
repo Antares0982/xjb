@@ -1,0 +1,38 @@
+name: Sync Upstream
+
+# Schedule triggers only fire on the **default** branch.
+# Make sure 'ssrjson' is set as the default branch on GitHub.
+
+on:
+  schedule:
+    - cron: '0 11 * * *'       # Every day at 11:00 UTC
+  workflow_dispatch:            # Allow manual trigger
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ssrjson
+          fetch-depth: 0        # Full history — required for merges
+
+      - name: Fetch branches
+        run: |
+          git fetch origin upstream:upstream main:main
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v30
+
+      - name: Setup Cachix
+        uses: cachix/cachix-action@v15
+        with:
+          name: antares0982
+
+      - name: Run sync
+        run: |
+          cp -r action_tools /tmp/action_tools
+          python3 /tmp/action_tools/sync.py

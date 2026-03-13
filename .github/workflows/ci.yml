@@ -1,5 +1,11 @@
 name: CI
-on: [push, pull_request]
+on:
+  push:
+    branches-ignore:
+      - ssrjson
+  pull_request:
+    branches-ignore:
+      - ssrjson
 jobs:
   test:
     runs-on: ubuntu-24.04
