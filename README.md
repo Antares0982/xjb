@@ -3,7 +3,7 @@ xjb : a fast float to string algorithm.
 
 float/double to string single file implementation : `src/ftoa.cpp`
 
-for json lib, satisfy  `RFC8259` or https://tc39.es/ecma262/#sec-numeric-types-number-tostring : `src/ftoa_json.cpp`
+for json lib, satisfy  `RFC8259` and https://tc39.es/ecma262/#sec-numeric-types-number-tostring : `src/ftoa_json.cpp`
 
 This code is still being updated continuously, so it may not be the final version. Later, I will write documentation to explain in detail the function of each line of code and the proof process.
 
@@ -20,12 +20,12 @@ make check
 
 ## src files:
 (1)float/double to decimal algorithm  
-&emsp;&emsp;   xjb32 : for float (IEEE754-binary32) ; `bench/xjb/xjb32_i.cpp`;  <!-- https://godbolt.org/z/eT57sW9q1   -->  
-&emsp;&emsp;   xjb64 : for double(IEEE754-binary64) ; `bench/xjb/xjb64_i.cpp`;  <!-- https://godbolt.org/z/oG7eW9jEj   -->
+&emsp;&emsp;   xjb32 : for float (IEEE754-binary32) ; `bench/xjb/float_to_decimal/xjb32_i.cpp`;  
+&emsp;&emsp;   xjb64 : for double(IEEE754-binary64) ; `bench/xjb/float_to_decimal/xjb64_i.cpp`;
 
 (2)float/double to string algorithm  
-&emsp;&emsp;   full lookup table : `bench/xjb/ftoa.cpp` 
-&emsp;&emsp;   compress lookup table : `bench/xjb/xjb_comp.cpp`
+&emsp;&emsp;   full lookup table : `bench/xjb/float_to_string/ftoa.cpp`  
+&emsp;&emsp;   compress lookup table : `bench/xjb/float_to_string/xjb_comp.cpp`
 
 lookup table size:
 <table border="1px">
@@ -122,19 +122,23 @@ This algorithm is inspired by algorithms such as schubfach, yy, dragonbox, and g
 ## benchmark:
 The benchmark test is in the `bench` directory. just run `make` to build the benchmark program.
 you can run `bench/main.cpp` to test the performance of the algorithm.  
-The latest benchmark results on Apple M1 and AMD R7-7840H CPU(date : 2026.2.18):
+The latest benchmark results on Apple M1 and AMD R7-7840H CPU(date : 2026.3.27):
 <!-- ![ramdom float apple M1](bench_result/random_float_m1.svg)
 ![ramdom double apple M1](bench_result/random_double_m1.svg)
 ![ramdom float amd 7840h](bench_result/random_float_7840h.svg)
 ![ramdom double amd 7840h](bench_result/random_double_7840h.svg) -->
 <table>
     <tr>
-        <td ><center><img src="bench_result/random_float_m1.svg" >ramdom float on Apple M1 </br> compiler: apple clang 17.0.0</center></td>
-        <td ><center><img src="bench_result/random_double_m1.svg"  >ramdom double on Apple M1</br> compiler: apple clang 17.0.0</center></td>
+        <td ><center><img src="bench_result/random_float_m1.svg" >ramdom float on Apple M1 </br> compiler: apple clang 21.0.0</center></td>
+        <td ><center><img src="bench_result/random_double_m1.svg"  >ramdom double on Apple M1</br> compiler: apple clang 21.0.0</center></td>
     </tr>
     <tr>
         <td><center><img src="bench_result/random_float_7840h.svg" >ramdom float on AMD R7-7840H </br> compiler: icpx 2025.0.4</center></td>
         <td ><center><img src="bench_result/random_double_7840h.svg"  >ramdom double on AMD R7-7840H</br> compiler: icpx 2025.0.4</center> </td>
+    </tr>
+    <tr>
+        <td><center><img src="bench_result/fixed-length_double_m1.svg" >fixed-length double on Apple M1 </br> compiler: apple clang 21.0.0</center></td>
+        <td ><center><img src="bench_result/fixed-length_double_7840h.svg"  >fixed-length double on AMD R7-7840H</br> compiler: icpx 2025.0.4</center> </td>
     </tr>
 </table>
 
