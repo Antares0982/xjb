@@ -322,6 +322,7 @@ struct double_table_t
 		};
 		uint192 current = {0xb2e28cedd086d011, 0x1e53ed49a96272c8, 0xcc5fc196fefd7d0c}; // e10 = -293
 		constexpr uint64_t ten = 0xa000000000000000;
+		u64 max_first_sig_pos = 0;
 		for (int i = 0; i < num_pow10; ++i)
 		{
 			int e10 = i - 293;
@@ -355,6 +356,7 @@ struct double_table_t
 		{
 			int tmp_data_ofs = e10 - e10_DN;
 			u64 first_sig_pos = (e10_DN <= e10 && e10 <= -1) ? 1 - e10 : 0;
+			max_first_sig_pos = first_sig_pos > max_first_sig_pos ? first_sig_pos : max_first_sig_pos;
 			u64 dot_pos = (0 <= e10 && e10 <= e10_UP) ? 1 + e10 : 1;
 			u64 move_pos = dot_pos + ((0 <= e10 || e10 < e10_DN));
 			e10_variable_data[tmp_data_ofs][max_dec_sig_len + 0] = first_sig_pos;
@@ -374,6 +376,11 @@ struct double_table_t
 			int h = q + (((-k - 1) * 217707) >> 16);
 			h7[exp] = (unsigned char)(h + 1 + offset);
 		}
+		// ssrJSON modified block: throw exc when mismatch
+		if (max_first_sig_pos != 5) {
+			throw "ssrJSON opt: max_first_sig_pos should be 5 for double.";
+		}
+		// ssrJSON modified block end
 	}
 };
 
@@ -407,6 +414,7 @@ struct float_table_t
 		};
 		uint128_xjb current = {0x67de18eda5814af3, 0xcfb11ead453994ba}; // e10 = -32
 		uint64_t ten = 0xa000000000000000;
+		u64 max_first_sig_pos = 0;
 		for (int i = 0; i < num_pow10; ++i)
 		{
 			int e10 = i - 32;
@@ -434,6 +442,7 @@ struct float_table_t
 		{
 			int tmp_data_ofs = e10 - e10_DN;
 			u64 first_sig_pos = (e10_DN <= e10 && e10 <= -1) ? 1 - e10 : 0;
+			max_first_sig_pos = first_sig_pos > max_first_sig_pos ? first_sig_pos : max_first_sig_pos;
 			u64 dot_pos = (0 <= e10 && e10 <= e10_UP) ? 1 + e10 : 1;
 			u64 move_pos = dot_pos + ((0 <= e10 || e10 < e10_DN));
 			e10_variable_data[tmp_data_ofs][max_dec_sig_len + 0] = first_sig_pos;
@@ -452,6 +461,11 @@ struct float_table_t
 			int h37_precalc = (36 + 1) + exp_bin + ((k * -1701 + (-1701)) >> 9);
 			h37[exp] = (unsigned char)h37_precalc;
 		}
+		// ssrJSON modified block: throw exc when mismatch
+		if (max_first_sig_pos != 4) {
+			throw "ssrJSON opt: max_first_sig_pos should be 4 for float.";
+		}
+		// ssrJSON modified block end
 	}
 };
 alignas(64) constexpr double_table_t double_table;
@@ -1438,7 +1452,11 @@ namespace xjb
 			sig_bin = sig;
 		}
 		if (exp == 255) [[unlikely]]
-			return (char *)memcpy(buf, sig ? "nan" : "inf", 4) + 3;
+		{
+			bool back = sig && (vi >> 31);
+			buf -= back;
+			return (char *)memcpy(buf , sig ? "NaN\0\0\0\0" : "Infinity", 8) + (sig ? 3 : 8);
+		}
 		u32 h37_precalc = t->h37[exp];
 		u32 irregular = sig == 0;
 		const int BIT = 36;
@@ -1522,8 +1540,12 @@ namespace xjb
 		//u32 lz;
 		//  u64 lz = (m < c->e6) ? 2 : (m < c->e7);
 		// u64 lz = (m < (u64)1e6) ? 2 : (m < (u64)1e7);
-		memcpy(buf, "00000000", 8);
-		memcpy(buf+8, "00000000", 8);
+		// ssrJSON modified block: max value of `first_sig_pos` is 4 for xjb32; write 4 '0' to buffer
+		// memcpy(buf, "00000000", 8);
+		// memcpy(buf+8, "00000000", 8);
+		constexpr u32 buf_init = 0x30303030; // "0000"
+		memcpy(buf, &buf_init, 4);
+		// ssrJSON modified block end
 		shortest_ascii8 s = to_ascii8(m_up, up_down, lz, c);
 		i64 e10 = k + (8 - lz);
 		// u64 offset_num = (((u64)('0' + '0' * 256) << (BIT - 1)) + (((u64)1 << (BIT - 2)) - 7)) + (dot_one_36bit >> (BIT - 4));
@@ -1720,6 +1742,11 @@ extern "C" {
 __attribute__((visibility("default"))) char* xjb64(
     double value, char* buffer) {
   return xjb::xjb64(value, buffer);
+}
+
+__attribute__((visibility("default"))) char* xjb32(
+    float value, char* buffer) {
+  return xjb::xjb32(value, buffer);
 }
 
 }  // extern "C"
