@@ -137,7 +137,7 @@ def test_ssrjson() -> None:
     # Run ssrjson tests via nix
     print("Running ssrjson tests…", flush=True)
     run_cmd(
-        ["nix", "develop", ".#buildenv-py313", "-c", "python", "dev_tools/linux_test.py", "--asan"],
+        ["nix", "develop", ".#buildenv-py313", "-c", "python", "ci/linux_test.py", "--asan"],
         cwd=ssrjson_dir,
     )
 
