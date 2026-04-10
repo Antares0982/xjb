@@ -1176,27 +1176,24 @@ namespace xjb
 		u64 vi_abs = (vi << 1) >> 1;
 		if ((u64)(vi_abs - 2) >= (u64)((2047ull << 52) - 2)) [[unlikely]]
 		{
-			// generate branch instruction
-			if (vi_abs == 0)
+			// generate cmov
+			bool back;
+			const char* copy_from;
+			u64 move;
+			if(vi_abs <= 1)
 			{
-				memcpy(buf, "0.0", 4);
-				return buf + 3;
+				copy_from = vi_abs ? "5e-324\0" : "0.0\0\0\0\0";
+				move = vi_abs ? 6 : 3;
+				return (char*)memcpy(buf, copy_from, 8) + move;
 			}
-			if (vi_abs == 1)
+			else
 			{
-				memcpy(buf, "5e-324\0", 8);
-				return buf + 6;
-			}
-			if (vi_abs == (2047ull << 52))
-			{
-				memcpy(buf, "Infinity", 8);
-				return buf + 8;
-			}
-			if (vi_abs > (2047ull << 52))
-			{
-				bool has_sign = vi >> 63;
-				memcpy(buf - has_sign, "NaN\0\0\0\0", 8);
-				return buf - has_sign + 3;
+				const bool is_inf = vi_abs == (2047ull << 52);
+				back = !is_inf && (vi >> 63);
+				const char _inf_literal[8] = {'I', 'n', 'f', 'i', 'n', 'i', 't', 'y'};
+				copy_from = is_inf ? _inf_literal : "NaN\0\0\0\0";
+				move = is_inf ? 8 : 3;
+				return (char*)memcpy(buf - back, copy_from, 8) + move;
 			}
 		}
 #endif
