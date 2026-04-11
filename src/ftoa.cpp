@@ -1106,7 +1106,7 @@ static inline char* xjb64(double v, char* buf) {
         bool back;
         const char* copy_from;
         u64 move;
-        if (vi_abs <= 1) {
+        if (vi_abs <= 1) [[likely]] {
             copy_from = vi_abs ? "5e-324\0" : "0.0\0\0\0\0";
             move = vi_abs ? 6 : 3;
             return (char*)memcpy(buf, copy_from, 8) + move;
