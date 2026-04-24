@@ -4,6 +4,9 @@
 // Original copyright (c) 2025 - present, Victor Zverovich
 // Distributed under the MIT license.
 
+// Usage:
+// clang++ -O3 -march=native -std=c++20 float-check.cc -o float-check
+
 #include <stdint.h>
 #include <string.h>
 
@@ -17,6 +20,8 @@
 
 #include "dragonbox_to_chars.h"
 #include "src/ftoa.cpp"
+
+//#include "../bench/schubfach_xjb/schubfach_xjb_i.hpp"
 
 // ---------------------------------------------------------------------------
 // Reference formatter that reproduces xjb32's formatting conventions.
@@ -122,7 +127,10 @@ int main() {
         char* aend = xjb::xjb32(value, actual);
         *aend = '\0';
 
-        // --- produce expected ---
+        // --- produce expected --- // faster
+        //schubfach_xjb_f32_to_str(value, expected);
+
+        // //--- produce expected ---
         if (value == 0.0f) {
           strcpy(expected, std::signbit(value) ? "-0.0" : "0.0");
         } else if (std::isinf(value)) {
