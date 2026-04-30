@@ -117,7 +117,7 @@ def test_ssrjson() -> None:
         shutil.rmtree(ssrjson_dir)
 
     print("Cloning ssrjson project…", flush=True)
-    run_cmd(["git", "clone", SSRJSON_URL, ssrjson_dir])
+    run_cmd(["git", "clone", "-b", "dev", SSRJSON_URL, ssrjson_dir])
 
     # Verify the target file exists
     target = os.path.join(ssrjson_dir, "src", "xjb", "xjb.cpp")
@@ -137,7 +137,15 @@ def test_ssrjson() -> None:
     # Run ssrjson tests via nix
     print("Running ssrjson tests…", flush=True)
     run_cmd(
-        ["nix", "develop", ".#buildenv-py313", "-c", "python", "ci/linux_test.py", "--asan"],
+        [
+            "nix",
+            "develop",
+            ".#buildenv-py314",
+            "-c",
+            "python",
+            "ci/linux_test.py",
+            "--asan",
+        ],
         cwd=ssrjson_dir,
     )
 
