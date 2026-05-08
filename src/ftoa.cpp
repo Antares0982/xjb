@@ -1637,10 +1637,11 @@ static inline char* xjb16(uint16_t bits, char* buf) {
     uint32_t first_sig_pos = (FIXED_MIN <= e10 && e10 <= -1) ? 1 - e10 : 0;
     uint32_t dot_pos = (0 <= e10 && e10 <= FIXED_MAX) ? 1 + e10 : 1;
     uint32_t move_pos = dot_pos + ((0 <= e10 || e10 < FIXED_MIN));
-    uint32_t exp_pos = (FIXED_MIN <= e10 && e10 <= -1)
-                           ? dec_sig_len
-                           : (0 <= e10 && e10 <= FIXED_MAX ? (e10 + 3 > dec_sig_len + 1 ? e10 + 3 : dec_sig_len + 1)
-                                                           : (dec_sig_len + 1 - (dec_sig_len == 1)));
+    uint32_t exp_pos =
+        (FIXED_MIN <= e10 && e10 <= -1)
+            ? dec_sig_len
+            : (0 <= e10 && e10 <= FIXED_MAX ? ((uint32_t)(e10 + 3) > dec_sig_len + 1 ? e10 + 3 : dec_sig_len + 1)
+                                            : (dec_sig_len + 1 - (dec_sig_len == 1)));
     char* buf_origin = buf;
     buf += first_sig_pos;
     ascii = D5 ? ascii : (ascii >> 8);
@@ -1668,7 +1669,7 @@ static inline char* xjb16(uint16_t bits, char* buf) {
     if (FIXED_MIN <= e10 && e10 <= FIXED_MAX)
         exp_result = 0;
     uint32_t exp_len = (FIXED_MIN <= e10 && e10 <= FIXED_MAX) ? 0 : 4;
-    memcpy(buf, &exp_result, 8);
+    memcpy(buf, &exp_result, 4);
     return buf + exp_len;
 }
 static inline char* xjb80(uint16_t v_hi16, uint64_t v_lo64, char* buf) {
