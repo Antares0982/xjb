@@ -1,0 +1,25 @@
+name: Test ssrJSON Integration
+
+on:
+  push:
+    branches:
+      - ssrjson
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ssrjson
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v30
+
+      - name: Setup Cachix
+        uses: cachix/cachix-action@v17
+        with:
+          name: antares0982
+
+      - name: Run ssrJSON integration test
+        run: python3 action_tools/sync.py --test-ssrjson

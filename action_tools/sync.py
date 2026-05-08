@@ -176,4 +176,7 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    if len(sys.argv) > 1 and sys.argv[1] == "--test-ssrjson":
+        test_ssrjson()
+    else:
+        main()
