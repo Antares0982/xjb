@@ -134,9 +134,11 @@ int main() {
         if (value == 0.0f) {
           strcpy(expected, std::signbit(value) ? "-0.0" : "0.0");
         } else if (std::isinf(value)) {
-          strcpy(expected, value < 0 ? "-inf" : "inf");
+          // ssrJSON fork emits Python/JSON spelling for non-finite values.
+          strcpy(expected, value < 0 ? "-Infinity" : "Infinity");
         } else if (std::isnan(value)) {
-          strcpy(expected, std::signbit(value) ? "-nan" : "nan");
+          // ssrJSON fork emits "NaN" and strips the sign of negative NaN.
+          strcpy(expected, "NaN");
         } else {
           auto dec = jkj::dragonbox::to_decimal(
               std::fabs(value), jkj::dragonbox::policy::sign::ignore);

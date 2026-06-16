@@ -144,6 +144,7 @@ TEST(dtoa_test, subnormal) {
   EXPECT_EQ(dtoa(1e-323), "1e-323");
   EXPECT_EQ(dtoa(1.2e-322), "1.2e-322");
   EXPECT_EQ(dtoa(1.5e-323), "1.5e-323");
+  EXPECT_EQ(dtoa(-1.5e-323), "-1.5e-323");
   EXPECT_EQ(dtoa(1.24e-322), "1.24e-322");
   EXPECT_EQ(dtoa(1.234e-320), "1.234e-320");
 }
@@ -178,13 +179,15 @@ TEST(dtoa_test, zero) {
 }
 
 TEST(dtoa_test, inf) {
-  EXPECT_EQ(dtoa(std::numeric_limits<double>::infinity()), "inf");
-  EXPECT_EQ(dtoa(-std::numeric_limits<double>::infinity()), "-inf");
+  // ssrJSON fork emits Python/JSON spelling for non-finite values.
+  EXPECT_EQ(dtoa(std::numeric_limits<double>::infinity()), "Infinity");
+  EXPECT_EQ(dtoa(-std::numeric_limits<double>::infinity()), "-Infinity");
 }
 
 TEST(dtoa_test, nan) {
-  EXPECT_EQ(dtoa(std::numeric_limits<double>::quiet_NaN()), "nan");
-  EXPECT_EQ(dtoa(-std::numeric_limits<double>::quiet_NaN()), "-nan");
+  // ssrJSON fork emits "NaN" and strips the sign of negative NaN.
+  EXPECT_EQ(dtoa(std::numeric_limits<double>::quiet_NaN()), "NaN");
+  EXPECT_EQ(dtoa(-std::numeric_limits<double>::quiet_NaN()), "NaN");
 }
 
 TEST(dtoa_test, shorter) {
@@ -231,11 +234,13 @@ TEST(ftoa_test, zero) {
 }
 
 TEST(ftoa_test, inf) {
-  EXPECT_EQ(ftoa(std::numeric_limits<float>::infinity()), "inf");
-  EXPECT_EQ(ftoa(-std::numeric_limits<float>::infinity()), "-inf");
+  // ssrJSON fork emits Python/JSON spelling for non-finite values.
+  EXPECT_EQ(ftoa(std::numeric_limits<float>::infinity()), "Infinity");
+  EXPECT_EQ(ftoa(-std::numeric_limits<float>::infinity()), "-Infinity");
 }
 
 TEST(ftoa_test, nan) {
-  EXPECT_EQ(ftoa(std::numeric_limits<float>::quiet_NaN()), "nan");
-  EXPECT_EQ(ftoa(-std::numeric_limits<float>::quiet_NaN()), "-nan");
+  // ssrJSON fork emits "NaN" and strips the sign of negative NaN.
+  EXPECT_EQ(ftoa(std::numeric_limits<float>::quiet_NaN()), "NaN");
+  EXPECT_EQ(ftoa(-std::numeric_limits<float>::quiet_NaN()), "NaN");
 }
