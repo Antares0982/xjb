@@ -389,7 +389,7 @@ struct double_table_t {
     static constexpr int num_pow10 = 323 - (-293) + 1;
     static constexpr int max_first_sig_pos = 5;
     static constexpr int max_one_offset = 17;
-    static constexpr int max_buffer_requirement = XJB_NO_MEMMOVE ? 32 : 33;
+    static constexpr int max_buffer_requirement = 33;
     static constexpr int max_valid_output_len = 24;
     uint64_t pow10_double[num_pow10 * 2] = {};       // 1234 * 8 = 9872 bytes
     uint64_t exp_result_double[324 + 308 + 1] = {};  // 633 * 8 = 5064 bytes
