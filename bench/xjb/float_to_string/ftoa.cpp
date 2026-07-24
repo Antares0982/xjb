@@ -126,6 +126,16 @@
 #    define XJB_NOT_REMOVE_FIRST_ZERO 0
 #endif
 
+// Fix performance regression on Zen4 under -fPIC.
+// But this mitigation is not needed on intel platforms, because intel has a fast AGU path for scaled-index load.
+// Above mitigation is only for Zen4, but we don't have a way to detect Zen4, so we just enable it for all x86-64 under
+// -fPIC. On intel i7 13700k, may cause 4% performance regression.
+#if defined(__x86_64__) && defined(__PIC__) && (defined(__clang__) || defined(__GNUC__)) && !defined(_MSC_VER)
+#    define XJB_NO_PIC_MITIGATION 0
+#else
+#    define XJB_NO_PIC_MITIGATION 1
+#endif
+
 /* Some compiler checks. */
 
 // Is the compiler really GCC.
@@ -770,43 +780,6 @@ static inline shortest_ascii16 to_ascii16_no_avx512(char* buf, const uint64_t m,
 }
 #endif  // XJB_USE_SSE2
 
-static inline uint64_t rotateRight64(uint64_t x, int s) {
-    return (x >> s) | (x << (64 - s));
-}
-
-static inline uint32_t countZeros(uint64_t x) {
-    const uint64_t maxUint64 = ~0ULL;
-    const uint64_t div1e8m = 0xc767074b22e90e21ULL;
-    const uint64_t div1e4m = 0xd288ce703afb7e91ULL;
-    const uint64_t div1e2m = 0x8f5c28f5c28f5c29ULL;
-    const uint64_t div1e1m = 0xcccccccccccccccdULL;
-    const uint64_t div1e8le = maxUint64 / 100000000;
-    const uint64_t div1e4le = maxUint64 / 10000;
-    const uint64_t div1e2le = maxUint64 / 100;
-    const uint64_t div1e1le = maxUint64 / 10;
-
-    uint64_t d;
-    uint32_t tz = 0;
-    // Cut 8 zeros, then 4, then 2, then 1.
-    if ((d = rotateRight64(x * div1e8m, 8)) <= div1e8le) {
-        x = d;
-        tz += 8;
-    }
-    if ((d = rotateRight64(x * div1e4m, 4)) <= div1e4le) {
-        x = d;
-        tz += 4;
-    }
-    if ((d = rotateRight64(x * div1e2m, 2)) <= div1e2le) {
-        x = d;
-        tz += 2;
-    }
-    if ((d = rotateRight64(x * div1e1m, 1)) <= div1e1le) {
-        x = d;
-        tz += 1;
-    }
-    return tz;
-}
-
 static inline shortest_ascii16 to_ascii16(char* buf, const uint64_t m, const uint64_t up_down, const uint64_t D17,
                                           const struct const_value_double* cv XJB_SHUFFLER_DECL) {
     // m range : [1, 1e16 - 1] ; m = abcdefgh * 10^8 + ijklmnop
@@ -955,10 +928,9 @@ static inline shortest_ascii8 to_ascii8(const uint64_t m, const uint32_t up_down
 #if XJB_USE_NEON
     int32x2_t tenthousands = vcreate_u64(m + c->m * ((m * (u128)c->div10000) >> 64));
     int32x2_t hundreds = vmla_n_s32(tenthousands, vqdmulh_s32(tenthousands, vdup_n_s32(c->m32_4[0])), c->m32_4[1]);
-    // int16x4_t BCD_big_endian = vmla_n_s16(hundreds, vqdmulh_s16(hundreds,
-    // vdup_n_s16(0xce0)), -10 + 0x100);
+    // int16x4_t BCD_big_endian = vmla_n_s16(hundreds, vqdmulh_s16(hundreds, vdup_n_s16(0xce0)), -10 + 0x100);
     int16x4_t BCD_big_endian = vmla_n_s16(hundreds, vqdmulh_s16(hundreds, vdup_n_s16(c->m32_4[2])),
-                                          c->m32_4[3]);  // fewer instructions but slower,why?
+                                          c->m32_4[3]);
     u64 hgfedcba_BCD = vget_lane_u64(BCD_big_endian, 0);
     u64 abcdefgh_BCD =
         byteswap64_xjb(vget_lane_u64(BCD_big_endian, 0));  // big_endian to little_endian , reverse 8 bytes
@@ -1213,43 +1185,6 @@ static inline char* write_1_to_16_digit(u64 x, char* buf, const struct const_val
         return buf;
     }
 }
-static inline char* process_special_double(const u64 sig, const u64 exp, i64& q, u64& c, bool& is_exit,
-                                           char* const buf) {
-    // 0,5e-324,inf,nan
-    // if( ((exp + 1) & 2047) <= 1)[[unlikely]]
-    {
-        if (exp == 0) [[unlikely]] {
-            if (sig <= 1) {
-                is_exit = true;
-                return (char*)memcpy(buf, sig ? "5e-324\0" : "0.0\0\0\0\0", 8) + (sig ? 6 : 3);
-            }
-            c = sig;
-            q = 1 - 1075;  // -1074
-        }
-        if (exp == 2047) [[unlikely]] {
-            is_exit = true;
-            return (char*)memcpy(buf, sig ? "nan" : "inf", 4) + 3;
-        }
-    }
-    return buf;
-}
-static inline char* process_small_int_double(const u64 c, const i64 q, const struct const_value_double* cv,
-                                             bool& is_exit, char* const buf) {
-#define use_fast_path_for_integer_xjb 0
-#if use_fast_path_for_integer_xjb
-#    if XJB_IS_REAL_GCC
-    u64 nq = -q;
-    if (nq <= u64_tz_bits(c)) [[unlikely]]  // use unlikely will generate jmp instruction
-#    else
-    if (nq <= u64_tz_bits(c))  //[[unlikely]]
-#    endif
-    {
-        is_exit = true;
-        return write_1_to_16_digit(c >> nq, buf, cv);  // fast path for integer
-    }
-#endif
-    return buf;
-}
 static inline i64 compute_k_double(i64 q) {
     // return floor(q*log10(2));
 #if defined(__SIZEOF_INT128__) && XJB_IS_AARCH64
@@ -1260,12 +1195,17 @@ static inline i64 compute_k_double(i64 q) {
 #endif
 }
 static inline void get_pow10(const struct double_table_t* t, const i64 k, u64* pow10_hi, u64* pow10_lo) {
-    const u64* pow10_ptr = t->pow10_double + 323 * 2 + 2;
-    *pow10_hi = pow10_ptr[k * 2 + 0];
-    *pow10_lo = pow10_ptr[k * 2 + 1];
-
-    // *pow10_hi = t->pow10_double[323 + 1 + k];
-    // *pow10_lo = t->pow10_double[323 + 1 + k + t->num_pow10];
+    const u64* pow10_ptr = t->pow10_double + 323 * 2 + 2 + k * 2;
+#if !XJB_NO_PIC_MITIGATION
+    // Under -fPIC this pow10 load sits on the double path's critical dependency
+    // chain. Left as `pow10_double[base + k*2]` it compiles to a scaled-index
+    // load (`movq disp(%base,%idx,8)`) which misses Zen4's fast AGU path and
+    // stalls the chain (~1.5-1.85x slower on Zen4). Folding the index into the
+    // base pointer via an opaque barrier makes it a base+disp load instead.
+    asm("" : "+r"(pow10_ptr));
+#endif
+    *pow10_hi = pow10_ptr[0];
+    *pow10_lo = pow10_ptr[1];
 }
 namespace xjb {
 static inline char* xjb64(double v, char* buf) {
@@ -1303,7 +1243,6 @@ static inline char* xjb64(double v, char* buf) {
         if (exp == 2047) [[unlikely]]
             return (char*)memcpy(buf, sig ? "nan" : "inf", 4) + 3;
     }
-    // process_small_int_double(c, q, cv, is_exit_small_int, buf);
     unsigned char h7_precalc = t->h7[exp];
     const int offset = 9;  //  offset in range [3,10] has same result.
     bool irregular = sig == 0;
@@ -1315,8 +1254,11 @@ static inline char* xjb64(double v, char* buf) {
     // decimal result : d * 10**k = (m_up * 10 + (up_down ? 0 : one)) * 10**k
     // d * 10**k satisfy Steele & White principle
 
-    // if (!irregular) [[likely]]
     {
+        // this likely code is core conversion from binary to decimal.
+        // the binary result is c * 2**q , the decimal result is d * 10**k
+        // the decimal result is (m_up * 10 + (up_down ? 0 : one)) * 10**k
+        // we convert c * 2**q to d * 10**k
         u64 hi64, lo64, pow10_hi, pow10_lo;
         k = compute_k_double((i64)exp - 1075);
         get_pow10(t, k, &pow10_hi, &pow10_lo);
@@ -1347,39 +1289,6 @@ static inline char* xjb64(double v, char* buf) {
         if (dot_one == (1ULL << 62))  // round to even
             one = 2;
     }
-
-    // i64 k = compute_k_double((i64)exp - 1075);
-    // u64* p10 = get_pow10_ptr(t, k);
-    // u64 cb = c << h7_precalc;
-    // u64 pow10_hi = p10[0], pow10_lo = p10[1];  // 128bit pow10
-    // u64 hi64, lo64;
-    // mul_u128_u64_high128(pow10_hi, pow10_lo, cb, &hi64, &lo64);
-    // u64 dot_one = (hi64 << (64 - offset)) | (lo64 >> offset);
-    // u64 half_ulp = (pow10_hi >> ((1 + offset) - h7_precalc)) + ((c + 1) & 1);
-    // bool up = half_ulp > ~0 - dot_one;
-    // bool down = half_ulp > dot_one;
-    // u64 m_up = (hi64 >> offset) + up;  // m + up
-    // u32 up_down = up + down; // up_down = 0 or 1
-    // u32 one = (u128_madd_hi64(dot_one, 10, dot_one == (1ULL << 62) ? dot_one : cv->c4));  // round to nearest,even
-    // if (irregular) [[unlikely]] {
-    //     // irregular case : c is 2**52 , exp range is [1,2046];
-    //     k = (i64)(q * 315653 - 131072) >> 20;
-    //     i64 h = q + ((k * -217707 - 217707) >> 16);
-    //     u64 pow10_hi = t->pow10_double[323 * 2 + 2 + k * 2];
-    //     u64 half_ulp = pow10_hi >> (-h);
-    //     u64 dot_one = (pow10_hi << (53 + h));
-    //     u64 up = (half_ulp > ~0 - dot_one);
-    //     u64 down = ((half_ulp >> 1) > dot_one);
-    //     m_up = (pow10_hi >> (11 - h)) + up;
-    //     up_down = up + down;
-    //     one = ((dot_one >> (53 + h)) * 5 + (1 << (9 - h))) >> (10 - h);
-    //     if ((((dot_one >> 54) * 5) & ((1 << 9) - 1)) > (((half_ulp >> 55) * 5)))
-    //         one = ((((dot_one >> 54) * 5) >> 9) + 1);
-    //     if (dot_one == (1ULL << 62))  // round to even
-    //         one = 2;
-    // }
-    // if (dot_one == (1ULL << 62)) [[unlikely]]  // round to even
-    //     one = 2;                               // 0.25 * 10 = 2.5 -> 2
     u64 D17 = m_up > (u64)cv->c3;     // (m_up >= (u64)1e15);
     u64 mr = D17 ? m_up : m_up * 10;  // remove the first digit zero
 
