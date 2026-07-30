@@ -33,3 +33,5 @@ example/example_json
 bench/check
 
 build/
+
+.workbuddy/
