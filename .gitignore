@@ -35,3 +35,4 @@ bench/check
 build/
 
 .workbuddy/
+.claude/
