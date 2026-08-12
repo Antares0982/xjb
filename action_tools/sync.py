@@ -117,7 +117,7 @@ def test_ssrjson() -> None:
         shutil.rmtree(ssrjson_dir)
 
     print("Cloning ssrjson project…", flush=True)
-    run_cmd(["git", "clone", "-b", "dev", SSRJSON_URL, ssrjson_dir])
+    run_cmd(["git", "clone", SSRJSON_URL, ssrjson_dir])
 
     # Verify the target file exists
     target = os.path.join(ssrjson_dir, "src", "xjb", "xjb.cpp")
